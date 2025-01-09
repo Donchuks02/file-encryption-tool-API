@@ -3,3 +3,4 @@ __pycache__/
 data/
 .env
 venv/
+pg_hba.conf

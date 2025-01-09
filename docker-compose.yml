@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres
+    container_name: postgres
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    command: ./wait-for-it.sh db:5432 -- python manage.py runserver 0.0.0.0:8000
+    restart: always
+    working_dir: /code
+    volumes:
+      - .:/code
+      - ./wait-for-it.sh:/wait-for-it.sh
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+volumes:
+  db_data:
