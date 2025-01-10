@@ -84,6 +84,10 @@ The File Encryption Tool API is a scalable and efficient solution for encrypting
    python manage.py makemigrations
    python manage.py migrate
    ```
+   If using Docker, make the wait-for-it.sh script executable:
+
+   ```bash
+   chmod +x wait-for-it.sh
 
 5. Start the development server:
    ```bash
