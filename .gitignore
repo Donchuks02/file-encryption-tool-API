@@ -4,3 +4,4 @@ data/
 .env
 venv/
 pg_hba.conf
+db.sqlite3
