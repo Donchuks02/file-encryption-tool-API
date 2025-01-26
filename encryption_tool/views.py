@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError, NotFound
 
 
 # imports for user profile view
@@ -11,7 +12,7 @@ from .serializers import ProfileSerializer, FileSerializer
 
 # imports for uploaded file encryption and decryption view
 from rest_framework.parsers import MultiPartParser
-from .encrypt_decrypt_logic import encrypt_file, decrypt_file
+from .encrypt_decrypt_logic import generate_key, encrypt_file, decrypt_file
 
 
 
@@ -41,7 +42,11 @@ class EncryptedFileView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request):
-        file = request.FILES['file']
+        try:
+            file = request.FILES['file']
+        except KeyError:
+            raise ValidationError("No file provided")
+
         key = generate_key()
         encrypted_data = encrypt_file(file, key)
 
@@ -53,7 +58,7 @@ class EncryptedFileView(APIView):
         )
 
         encrypted_file.encrypted_file.save(file.name + "enc", ContentFile(encrypted_data))
-        return Response({'message': 'File encrypted successfully', 'key': key.decode()})
+        return Response({'message': 'File encrypted successfully', 'key': key.decode()}, status=status.HTTP_201_CREATED)
 
 
 
@@ -62,9 +67,16 @@ class DecryptFileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        file_id = request.data['file_id']
-        key = request.data['key'].encode()
-        encrypted_file = EncryptedFile.objects.get(id=file_id, user=request.user)
+        try:
+            file_id = request.data['file_id']
+            key = request.data['key'].encode()
+        except KeyError:
+            raise ValidationError("File ID and key are required")
+        
+        try:
+            encrypted_file = EncryptedFile.objects.get(id=file_id, user=request.user)
+        except EncryptedFile.DoesNotExist:
+            raise NotFound("File not found")
 
         decrypted_data = decrypt_file(encrypted_file.encrypted_file.read(), key)
         response = HttpResponse(decrypted_data, content_type="application/octet-stream")

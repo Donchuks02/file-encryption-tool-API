@@ -13,4 +13,7 @@ def encrypt_file(file, key):
 def decrypt_file(encrypted_data, key):
     f = Fernet(key)
     return f.decrypt(encrypted_data)
-    
+
+
+
+

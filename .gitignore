@@ -5,3 +5,4 @@ data/
 venv/
 pg_hba.conf
 db.sqlite3
+migrations/
