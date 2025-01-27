@@ -17,4 +17,13 @@ class EncryptedFile(models.Model):
   encrypted_file = models.FileField(upload_to='encrypted_files/', blank=True, null=True)
   encrypted_method = models.CharField(max_length=50)
   created_at = models.DateTimeField(auto_now_add=True)
+  file_size = models.PositiveIntegerField(default=0)
+  decryption_count = models.PositiveIntegerField(default=0)
+
+
+  def save(self, *args, **kwargs):
+    if self.file and not self.file_size:
+      self.file_size = self.file.size
+      
+    super().save(*args, **kwargs)
 

@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 
 
 # imports for user profile view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .models import Profile, EncryptedFile
 from .serializers import ProfileSerializer, FileSerializer, EncryptedFileSerializer
 
@@ -18,6 +18,8 @@ from .encrypt_decrypt_logic import generate_key, encrypt_file, decrypt_file
 # imports to list and delete encrypted files
 from rest_framework.generics import ListAPIView, DestroyAPIView
 
+# imports for analytics views
+from django.db.models import Sum, Count
 
 
 
@@ -58,7 +60,8 @@ class EncryptedFileView(APIView):
             user=request.user,
             file=file,
             encrypted_file=None,
-            encryption_method='AES',
+            encrypted_method='AES',
+            upload_date=mow(),
         )
 
         encrypted_file.encrypted_file.save(file.name + "enc", ContentFile(encrypted_data))
@@ -84,6 +87,9 @@ class DecryptFileView(APIView):
             encrypted_file = EncryptedFile.objects.get(id=file_id, user=request.user)
         except EncryptedFile.DoesNotExist:
             raise NotFound("File not found")
+        
+        encrypted_file.decryption_count += 1
+        encrypt_file.save()
 
         decrypted_data = decrypt_file(encrypted_file.encrypted_file.read(), key)
         response = HttpResponse(decrypted_data, content_type="application/octet-stream")
@@ -122,3 +128,25 @@ class DeleteEncryptedFileView(DestroyAPIView):
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
+
+
+class AnalyticsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        total_files = EncryptedFile.objects.count()
+        total_file_size = EncryptedFile.objects.aggregate(Sum('file_size'))['file_size__sum'] or 0
+        total_decryptions = EncryptedFile.objects.aggregate(Sum('decryption_count'))['decryption_count__sum'] or 0
+        user_stats = EncryptedFile.objects.values('user__username').annotate(
+            file_count=Count('id'),
+            total_size=Sum('file_size'),
+            decryptions=Sum('decryption_count')
+        )
+
+        data = {
+            'total_files': total_files,
+            'total_file_size': total_file_size,
+            'total_decryptions': total_decryptions,
+            'user_stats': list(user_stats),
+        }
+        return Response(data)
