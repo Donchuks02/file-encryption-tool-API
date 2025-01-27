@@ -13,6 +13,7 @@ from .serializers import ProfileSerializer, FileSerializer
 # imports for uploaded file encryption and decryption view
 from rest_framework.parsers import MultiPartParser
 from .encrypt_decrypt_logic import generate_key, encrypt_file, decrypt_file
+import secrets
 
 
 
@@ -58,6 +59,9 @@ class EncryptedFileView(APIView):
         )
 
         encrypted_file.encrypted_file.save(file.name + "enc", ContentFile(encrypted_data))
+
+        encryption_key = EncryptedKey.objects.create(user=request.user, key=key.decode())
+
         return Response({'message': 'File encrypted successfully', 'key': key.decode()}, status=status.HTTP_201_CREATED)
 
 
@@ -82,3 +86,21 @@ class DecryptFileView(APIView):
         response = HttpResponse(decrypted_data, content_type="application/octet-stream")
         response['Content-Disposition'] = f'attachment; filename="{encrypted_file.file.name}"'
         return response
+
+
+class EncryptionKeyView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        keys = EncryptionKey.objects.filter(user=request.user)
+        serializer = EncryptedKeySerializer(keys, many=True)
+        return Response(serializer.data)
+
+
+
+    def delete(self, request, key_id):
+        try:
+            encryption_key = EncryptionKey.objects.get(id=key_id, user=request.user)
+            encryption_key.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except EncryptionKey.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
