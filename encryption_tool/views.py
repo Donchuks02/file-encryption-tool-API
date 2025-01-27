@@ -7,13 +7,16 @@ from rest_framework.exceptions import ValidationError, NotFound
 # imports for user profile view
 from rest_framework.permissions import IsAuthenticated
 from .models import Profile, EncryptedFile
-from .serializers import ProfileSerializer, FileSerializer
+from .serializers import ProfileSerializer, FileSerializer, EncryptedFileSerializer
 
 
 # imports for uploaded file encryption and decryption view
 from rest_framework.parsers import MultiPartParser
 from .encrypt_decrypt_logic import generate_key, encrypt_file, decrypt_file
-import secrets
+
+
+# imports to list and delete encrypted files
+from rest_framework.generics import ListAPIView, DestroyAPIView
 
 
 
@@ -104,3 +107,18 @@ class EncryptionKeyView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except EncryptionKey.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+class ListEncryptedFilesView(APIView):
+    serializer_class = EncryptedFileSerializer
+    queryset = EncryptedFile.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+
+class DeleteEncryptedFileView(DestroyAPIView):
+    queryset = EncryptedFile.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)

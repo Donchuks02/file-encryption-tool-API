@@ -14,4 +14,9 @@ class FileSerializer(serializers.ModelSerializer):
         model = EncryptedFile
         fields = ['file', 'encrypted_method', 'encrypted_file']
         read_only_fields = ['encrypted_file']
-    
+
+
+class EncryptedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EncryptedFile
+        fields = ['encrypted_file']
